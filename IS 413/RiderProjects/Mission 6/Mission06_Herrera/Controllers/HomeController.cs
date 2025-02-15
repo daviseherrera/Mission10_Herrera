@@ -2,6 +2,9 @@ using System.Diagnostics;
 using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
 using Mission06_Herrera.Models;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 
 namespace Mission06_Herrera.Controllers;
 
@@ -32,11 +35,25 @@ public class HomeController : Controller
     }
     
     [HttpPost]
-    public IActionResult MovieSubmission(MovieSubmissionContext.Submission response)
+    public async Task<IActionResult> MovieSubmission(MovieSubmissionContext.Submission response)
     {
-        _context.Submissions.Add(response); // Add record to the database
-        _context.SaveChanges();
-        
-        return View("Confirmation", response);
+        int retryCount = 3; // Number of retries
+        while (retryCount > 0)
+        {
+            try
+            {
+                _context.Submissions.Add(response); // Add record to the database
+                await _context.SaveChangesAsync(); // Use async to avoid blocking
+                return View("Confirmation", response);
+            }
+            catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.SqliteErrorCode == 5) // SQLite Error 5: Database is locked
+            {
+                retryCount--;
+                if (retryCount == 0)
+                    throw; // Re-throw the exception if retries are exhausted
+                await Task.Delay(100); // Wait for 100ms before retrying
+            }
+        }
+        return View("Error"); // Fallback in case of failure
     }
 }
