@@ -37,6 +37,10 @@ public class HomeController : Controller
     [HttpPost]
     public async Task<IActionResult> MovieSubmission(MovieSubmissionContext.Submission response)
     {
+        // Ensure LentTo and Notes are stored as NULL instead of empty strings
+        response.LentTo = string.IsNullOrWhiteSpace(response.LentTo) ? null : response.LentTo;
+        response.Notes = string.IsNullOrWhiteSpace(response.Notes) ? null : response.Notes;
+
         int retryCount = 3; // Number of retries
         while (retryCount > 0)
         {
